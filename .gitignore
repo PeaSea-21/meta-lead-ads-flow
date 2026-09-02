@@ -1,0 +1,16 @@
+node_modules/
+output/
+.env
+.env.*
+!.env.example
+*.log
+
+# Browser diagnostics may contain account context or authentication data.
+.auth/
+playwright/.auth/
+storage-state*.json
+*.har
+trace*.zip
+playwright-report/
+test-results/
+blob-report/

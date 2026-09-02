@@ -1,0 +1,15 @@
+{
+  "name": "meta-lead-ads-flow-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only AdsPower probe and Codex skill for Meta Leads instant-form drafts.",
+  "scripts": {
+    "check": "node --check skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs",
+    "probe": "node skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs",
+    "smoke": "node skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.62.1"
+  }
+}
