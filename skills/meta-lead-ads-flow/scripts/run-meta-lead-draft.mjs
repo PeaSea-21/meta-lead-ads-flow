@@ -9,12 +9,16 @@ import {
   assertResumeAllowed,
   checkpointRecord,
   confirmAction,
+  hasExpectedCreativeCopyFields,
+  nearestBudgetText,
   objectsForState,
+  openImageCreative,
   pendingAction,
   readLatestCheckpoint,
   requestFingerprint,
   validateDraftRequest,
   withAtMostOneRetry,
+  writeInputAndBlur,
 } from "./draft-runner-core.mjs";
 import {
   accessBlockerPatterns,
@@ -161,15 +165,12 @@ async function fillAndVerify(factory, label, value, {
 } = {}) {
   const input = await uniqueVisible(factory, label);
   await input.scrollIntoViewIfNeeded();
-  if (sequential) {
-    await input.click();
-    await input.press("Control+A");
-    await input.press("Backspace");
-    await input.pressSequentially(String(value), { delay: 50 });
-  } else {
-    await input.fill(String(value));
-  }
-  await input.press("Tab");
+  await writeInputAndBlur({
+    input,
+    reacquire: () => uniqueVisible(factory, label),
+    value,
+    sequential,
+  });
   await waitUntil(async () => {
     const current = await uniqueVisible(factory, label);
     return normalize(await current.inputValue()) === normalize(String(value));
@@ -416,7 +417,7 @@ async function main() {
           error.code = "STATE_MISMATCH";
           throw error;
         }
-        const budgetArea = (await amountInput.evaluate((element) => element.parentElement?.parentElement?.innerText ?? ""));
+        const budgetArea = await nearestBudgetText(amountInput);
         const expectedKind = request.budget.kind === "daily"
           ? /單日預算|每日预算|Daily budget/i
           : /總預算|总预算|Lifetime budget/i;
@@ -548,10 +549,11 @@ async function main() {
           "Set up ad creative button",
           { scrollAnchor: creativeAnchor },
         );
-        await setup.click();
-        await waitForDialog(page, "Creative type dialog");
-        const imageAd = await uniqueVisible(() => page.getByText(/^(圖像廣告|图片广告|Image ad)$/i), "Image ad option");
-        await imageAd.click();
+        await openImageCreative({
+          setup,
+          resolveImageAd: () => uniqueVisible(() => page.getByText(/^(圖像廣告|图片广告|Image ad)$/i), "Image ad option"),
+          waitForDialog: () => waitForDialog(page, "Creative media dialog"),
+        });
         const assetPattern = new RegExp(escapeRegex(request.creative.assetName), "i");
         await waitUntil(async () => {
           const currentDialog = visible(page.getByRole("dialog"));
@@ -573,21 +575,18 @@ async function main() {
         await next.click();
         await waitUntil(async () => /文字|Text/i.test((await visible(page.getByRole("dialog")).innerText()).slice(0, 2_000)), { timeout: DIALOG_TIMEOUT, label: "Creative copy page" });
         dialog = await waitForDialog(page, "Creative copy dialog");
-        const primaryFactory = () => dialog.locator([
-          'div:has(> div:text-is("向用戶說明你的廣告內容")) > textarea',
-          'div:has(> div:text-is("向用户说明你的广告内容")) > textarea',
-          'div:has(> div:text-is("Tell people what your ad is about")) > textarea',
-        ].join(","));
-        const headlineFactory = () => dialog.locator([
-          'div:has(> div:text-is("請撰寫簡短標題")) > textarea',
-          'div:has(> div:text-is("请撰写简短标题")) > textarea',
-          'div:has(> div:text-is("Write a short headline")) > textarea',
-        ].join(","));
-        const descriptionFactory = () => dialog.locator([
-          'div:has(> div:text-is("新增更多詳細資訊")) > textarea',
-          'div:has(> div:text-is("添加更多详细信息")) > textarea',
-          'div:has(> div:text-is("Add more details")) > textarea',
-        ].join(","));
+        const copyPageText = await dialog.innerText();
+        if (!hasExpectedCreativeCopyFields(copyPageText)) {
+          throw new Error("Creative copy fields do not match the expected primary/headline/description order");
+        }
+        await waitUntil(async () => await visible(dialog.locator("textarea")).count() === 3, {
+          timeout: DIALOG_TIMEOUT,
+          label: "three creative copy fields",
+        });
+        const copyFields = () => visible(dialog.locator("textarea"));
+        const primaryFactory = () => copyFields().nth(0);
+        const headlineFactory = () => copyFields().nth(1);
+        const descriptionFactory = () => copyFields().nth(2);
         await fillAndVerify(primaryFactory, "Primary text", request.creative.primaryText);
         await fillAndVerify(headlineFactory, "Headline", request.creative.headline);
         await fillAndVerify(descriptionFactory, "Description", request.creative.description);

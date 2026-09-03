@@ -330,3 +330,42 @@ export async function withAtMostOneRetry(operation, reProbe = async () => {}) {
     }
   }
 }
+
+export async function writeInputAndBlur({ input, reacquire, value, sequential = false }) {
+  if (sequential) {
+    await input.click();
+    await input.press("Control+A");
+    await input.press("Backspace");
+    await input.pressSequentially(String(value), { delay: 50 });
+  } else {
+    await input.fill(String(value));
+  }
+  const currentInput = await reacquire();
+  await currentInput.press("Tab");
+}
+
+export async function nearestBudgetText(input, maxDepth = 8) {
+  return input.evaluate((element, depthLimit) => {
+    let current = element;
+    let fallback = "";
+    for (let depth = 0; current && depth < depthLimit; depth += 1, current = current.parentElement) {
+      const text = current.innerText ?? "";
+      if (text) fallback = text;
+      if (/單日預算|每日预算|Daily budget|總預算|总预算|Lifetime budget/i.test(text)) return text;
+    }
+    return fallback;
+  }, maxDepth);
+}
+
+export async function openImageCreative({ setup, resolveImageAd, waitForDialog }) {
+  await setup.click();
+  const imageAd = await resolveImageAd();
+  await imageAd.click();
+  return waitForDialog();
+}
+
+export function hasExpectedCreativeCopyFields(text) {
+  return /向用戶說明你的廣告內容|向用户说明你的广告内容|Tell people what your ad is about/i.test(text)
+    && /請撰寫簡短標題|请撰写简短标题|Write a short headline/i.test(text)
+    && /新增更多詳細資訊|添加更多详细信息|Add more details/i.test(text);
+}

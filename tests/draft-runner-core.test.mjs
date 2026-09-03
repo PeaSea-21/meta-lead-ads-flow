@@ -8,13 +8,17 @@ import {
   acquireWriterLocks,
   appendCheckpoint,
   assertResumeAllowed,
+  hasExpectedCreativeCopyFields,
+  nearestBudgetText,
   objectsForState,
+  openImageCreative,
   readLatestCheckpoint,
   requestFingerprint,
   resolveDraftRequest,
   stableStringify,
   validateDraftRequest,
   withAtMostOneRetry,
+  writeInputAndBlur,
 } from "../skills/meta-lead-ads-flow/scripts/draft-runner-core.mjs";
 
 function request(overrides = {}) {
@@ -139,4 +143,53 @@ test("an idempotent operation receives only one retry", async () => {
     throw new Error("still missing");
   }));
   assert.equal(attempts, 2);
+});
+
+test("blurs the reacquired input after a React rerender", async () => {
+  const events = [];
+  const staleInput = {
+    async fill(value) { events.push(`fill:${value}`); },
+    async press(key) { events.push(`stale:${key}`); },
+  };
+  const currentInput = {
+    async press(key) { events.push(`current:${key}`); },
+  };
+
+  await writeInputAndBlur({
+    input: staleInput,
+    reacquire: async () => currentInput,
+    value: "TEST ONLY",
+  });
+
+  assert.deepEqual(events, ["fill:TEST ONLY", "current:Tab"]);
+});
+
+test("finds budget semantics beyond the input's immediate parents", async () => {
+  const root = { innerText: "預算模式\n單日預算\nBDT", parentElement: null };
+  const level3 = { innerText: "", parentElement: root };
+  const level2 = { innerText: "", parentElement: level3 };
+  const level1 = { innerText: "", parentElement: level2 };
+  const input = {
+    async evaluate(callback, maxDepth) {
+      return callback({ innerText: "", parentElement: level1 }, maxDepth);
+    },
+  };
+
+  assert.match(await nearestBudgetText(input), /單日預算/);
+});
+
+test("selects image ad before waiting for its dialog", async () => {
+  const events = [];
+  await openImageCreative({
+    setup: { async click() { events.push("setup"); } },
+    resolveImageAd: async () => ({ async click() { events.push("image"); } }),
+    waitForDialog: async () => { events.push("dialog"); },
+  });
+  assert.deepEqual(events, ["setup", "image", "dialog"]);
+});
+
+test("recognizes the three creative copy fields across supported locales", () => {
+  assert.equal(hasExpectedCreativeCopyFields("向用戶說明你的廣告內容 請撰寫簡短標題 新增更多詳細資訊"), true);
+  assert.equal(hasExpectedCreativeCopyFields("Tell people what your ad is about Write a short headline Add more details"), true);
+  assert.equal(hasExpectedCreativeCopyFields("Tell people what your ad is about Write a short headline"), false);
 });
