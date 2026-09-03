@@ -17,6 +17,7 @@ meta-lead-ads-flow/
 |-- skills/meta-lead-ads-concurrent/
 |   |-- SKILL.md
 |   |-- agents/openai.yaml
+|   |-- references/checkpoints.md
 |   |-- references/job-manifest.md
 |   `-- scripts/validate-job-manifest.mjs
 |-- tests/
@@ -113,7 +114,7 @@ npm run probe -- --profile=YOUR_ADSPOWER_PROFILE_ID --start
 
 ## 多 Profile 并发
 
-使用 `$meta-lead-ads-concurrent` 时，每个任务必须显式绑定 AdsPower Profile、Meta 广告账户、Facebook Page，以及带币种的预算。真实任务清单应使用 `*.ads-jobs.local.json` 文件名并保持在 Git 之外。
+使用 `$meta-lead-ads-concurrent` 时，每个任务必须显式绑定人工已打开并确认的 AdsPower Profile、Meta 广告账户、Facebook Page，以及带币种的预算。任务清单 schema `version: 2` 还必须指定本地 JSONL 检查点路径。真实任务清单应使用 `*.ads-jobs.local.json` 文件名，检查点应放在 `.meta-lead-ads/`，两者都保持在 Git 之外。
 
 校验任务清单：
 
@@ -121,7 +122,7 @@ npm run probe -- --profile=YOUR_ADSPOWER_PROFILE_ID --start
 npm run validate:manifest -- <manifest.ads-jobs.local.json>
 ```
 
-同一 Profile 或同一广告账户的任务会串行执行；不同 Profile 和账户可以在配置的上限内并行。`targetState: "published"` 只表示目标，不等于发布授权。发布前仍需要当前对话中针对具体任务的明确确认。
+同一 Profile 或同一广告账户的任务会串行执行；不同 Profile 和账户可以在配置的上限内并行。普通幂等操作最多重试一次，创建和发布等结果不明确时只做状态对账，不自动重放。`targetState: "published"` 只表示目标，不等于发布授权。发布前仍需要当前对话中针对具体任务的明确确认。
 
 ## 常见状态
 

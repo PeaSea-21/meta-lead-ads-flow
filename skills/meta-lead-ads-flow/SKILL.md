@@ -70,9 +70,11 @@ The probe is local evidence. Do not commit its raw output if it contains account
 3. Use the stable anchors above for page gates and major choices.
 4. Use live probing for volatile details: current language, visible button names, required-field validation text, dropdown option names, upload widgets, footer controls, and Meta AI enhancement cards.
 5. Before each click or fill, require a unique visible target. If more than one matching control exists, collect candidate names and stop or refine using nearby stable section text.
-6. Reacquire locators after every scroll or autosave. Meta Ads Manager virtualizes editor sections and can replace nodes during React rerenders.
-7. Use screenshots and audit JSONL for local verification, but keep them ignored unless a redacted artifact is explicitly requested.
-8. Stop after a saved draft or after the configured form/ad creative is ready for human review. Record that publish was not clicked and report any publish-only notice.
+6. Perform one semantic UI operation at a time. After navigation require the expected path or heading; after field writes read back the value; after mutations wait for validation and autosave before continuing.
+7. Retry an ordinary idempotent operation at most once after a fresh probe. Do not automatically retry an ambiguous Campaign, Ad Set, Form, creative, or publish creation action.
+8. Reacquire locators after every scroll or autosave. Meta Ads Manager virtualizes editor sections and can replace nodes during React rerenders.
+9. Use screenshots and audit JSONL for local verification, but keep them ignored unless a redacted artifact is explicitly requested.
+10. Stop after a saved draft or after the configured form/ad creative is ready for human review. Record that publish was not clicked and report any publish-only notice.
 
 ## Form Defaults From Source Screenshots
 

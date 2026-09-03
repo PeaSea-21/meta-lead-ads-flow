@@ -23,7 +23,12 @@ export function validateJobManifest(manifest) {
   const warnings = [];
 
   if (!isObject(manifest)) return { valid: false, errors: ["manifest must be an object"], warnings };
-  if (manifest.version !== 1) errors.push("version must be 1");
+  if (manifest.version !== 2) errors.push("version must be 2");
+  if (!nonEmptyString(manifest.checkpointPath)) {
+    errors.push("checkpointPath must be a non-empty local .jsonl path");
+  } else if (/^https?:\/\//i.test(manifest.checkpointPath) || !/\.jsonl$/i.test(manifest.checkpointPath)) {
+    errors.push("checkpointPath must be a non-empty local .jsonl path");
+  }
 
   const concurrency = isObject(manifest.concurrency) ? manifest.concurrency : {};
   const normalizedConcurrency = {
