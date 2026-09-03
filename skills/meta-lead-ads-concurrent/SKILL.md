@@ -32,6 +32,18 @@ Coordinate isolated Meta Leads jobs without mixing browser profiles, ad accounts
 - Keep the base runner as the sole owner of its CDP connection, `Page`, locators, dialogs, field readback, autosave checks, and stage screenshots. The coordinator observes process results and schedules jobs; it must not click or fill the worker's page.
 - Reuse `../meta-lead-ads-flow/scripts/run-meta-lead-draft.mjs` and its core helpers directly. Do not copy their locators, waits, retry logic, or UI-stage implementation into the concurrent Skill.
 
+## Agent-Per-Profile Mode
+
+When subagent delegation is available, use one coordinator Agent plus one child Agent per concurrently active AdsPower Profile. This is the preferred mode for true multi-browser execution.
+
+- The coordinator validates the complete manifest, forms non-conflicting Profile/account groups, assigns jobs, waits for results, and produces the batch report. It must not connect to or operate a worker's browser.
+- Assign each child Agent exactly one job and one declared Profile at a time. That Agent owns the job's runner process and CDP connection until it reports a terminal or paused state; it must not switch to another active Profile or operate another Agent's page.
+- Compute active child count at runtime as the minimum of the manifest limit, currently available child-Agent slots, and non-conflicting Profile/account groups. Never hardcode a platform slot count in the Skill or manifest. Queue excess jobs.
+- Give a child Agent only its job slice, exact request/checkpoint/diagnostics paths, and the base Flow Skill. The child must run the read-only identity and currency checks before its first write and return the verified job state to the coordinator.
+- A child Agent may perform only one semantic UI operation at a time. Parallelism exists between isolated child Agents, never between pages or tabs owned by one child.
+- If a child exits, disconnects, or is replaced, the next child must acquire the same locks and reconcile the durable checkpoint with Meta before continuing. A `pending` or `UNKNOWN` non-idempotent action must never be replayed automatically.
+- If subagent delegation is unavailable, use isolated runner processes under the same worker contract. Do not compensate by having one Agent rapidly interleave UI operations across multiple browsers.
+
 ## UI Operation Discipline
 
 - Within one Profile, allow only one in-flight semantic UI operation. Different confirmed Profiles and accounts may progress concurrently within the global limit.
@@ -53,7 +65,7 @@ Coordinate isolated Meta Leads jobs without mixing browser profiles, ad accounts
    ```
 
 2. Confirm that every declared Profile is already open, then run a read-only probe for each one. Do not mutate any job until every job has a resolved Profile, exactly one intended Ads Manager tab, matching account/page/currency, and a classified gate.
-3. Schedule draft work with the manifest's bounded concurrency. Default to two workers when unspecified; apply Profile and account locks regardless of the global limit.
+3. Schedule draft work with the manifest's bounded concurrency. Default to two workers when unspecified; apply Profile and account locks regardless of the global limit. When subagents are available, use Agent-Per-Profile Mode and queue jobs beyond the current child-Agent capacity.
 4. Before resuming or writing, read the base workflow's [checkpoint protocol](../meta-lead-ads-flow/references/checkpoints.md), acquire both locks, and reconcile the latest checkpoint with Meta. A missing checkpoint after an ambiguous create action is not proof that the action failed.
 5. Start the committed single-job runner for each scheduled draft, using the job's request, the manifest checkpoint, and a job-specific diagnostics directory:
 

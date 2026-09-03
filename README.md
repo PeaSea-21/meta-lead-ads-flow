@@ -141,6 +141,8 @@ npm run validate:manifest -- <manifest.ads-jobs.local.json>
 
 并发协调器为每个任务调用同一个参数化单任务 Runner，并让 Runner 独占该任务的 CDP 连接和页面状态；并发 Skill 不复制 Meta Locator、弹窗流程或等待逻辑。因此，单任务 Runner 的界面漂移修复会同时作用于并发任务。
 
+运行环境支持子 Agent 时，并发 Skill 优先使用“一个主 Agent 调度、一个子 Agent 绑定一个 AdsPower Profile”的模式。实际并发数取任务清单上限、当前可用子 Agent 槽位和无冲突 Profile/广告账户组数量中的最小值；额外任务排队，不在 Skill 中写死 Agent 数量。
+
 ## 常见状态
 
 - `PROBE_CLEAR`：可以继续草稿流程。
