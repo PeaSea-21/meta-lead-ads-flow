@@ -139,6 +139,8 @@ npm run validate:manifest -- <manifest.ads-jobs.local.json>
 
 同一 Profile 或同一广告账户的任务会串行执行；不同 Profile 和账户可以在配置的上限内并行。普通幂等操作最多重试一次，创建和发布等结果不明确时只做状态对账，不自动重放。`targetState: "published"` 只表示目标，不等于发布授权。发布前仍需要当前对话中针对具体任务的明确确认。
 
+并发协调器为每个任务调用同一个参数化单任务 Runner，并让 Runner 独占该任务的 CDP 连接和页面状态；并发 Skill 不复制 Meta Locator、弹窗流程或等待逻辑。因此，单任务 Runner 的界面漂移修复会同时作用于并发任务。
+
 ## 常见状态
 
 - `PROBE_CLEAR`：可以继续草稿流程。

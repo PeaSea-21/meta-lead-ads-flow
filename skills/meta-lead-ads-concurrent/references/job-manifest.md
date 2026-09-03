@@ -42,7 +42,9 @@ Use a local JSON manifest to bind every job to an explicit browser Profile and M
 - Every Profile used for writing must already be open and explicitly confirmed by a human for the current batch. This confirmation is runtime state and must not be represented as a manifest authorization flag.
 - `targetState` is `draft` or `published`; it does not grant publish authorization.
 - `budget.kind` is `daily` or `lifetime`; `amount` is positive; `currency` is an uppercase ISO 4217 code.
-- `requestPath` points to local job inputs. The coordinator must validate the referenced request before opening Ads Manager.
+- `requestPath` points to a local base-runner request. Before opening Ads Manager, the coordinator must validate it and require exact agreement with the manifest for `jobId`, `profileId`, `adAccountId`, `page.id`, optional `businessId`, and `{ kind, amount, currency }` budget.
+- Each scheduled job runs through `../meta-lead-ads-flow/scripts/run-meta-lead-draft.mjs`. The coordinator must not keep a separate copy of the UI locators, waits, creative-dialog flow, or retry implementation.
+- Use a distinct diagnostics directory for each `jobId`. Checkpoint records may share the manifest's append-only JSONL file because records are keyed by `jobId`; never reuse one job's latest record for another job.
 
 Run the validator from this Skill directory:
 

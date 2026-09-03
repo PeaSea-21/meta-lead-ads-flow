@@ -5,7 +5,7 @@ description: Coordinate multiple Meta lead-ad jobs across explicit AdsPower prof
 
 # Meta Lead Ads Concurrent
 
-Coordinate isolated Meta Leads jobs without mixing browser profiles, ad accounts, currencies, drafts, or publish outcomes. For the UI workflow inside each job, also read the adjacent `../meta-lead-ads-flow/SKILL.md`.
+Coordinate isolated Meta Leads jobs without mixing browser profiles, ad accounts, currencies, drafts, or publish outcomes. For the UI workflow inside each job, read the adjacent `../meta-lead-ads-flow/SKILL.md` and use its committed single-job runner. The coordinator schedules workers; it does not maintain a second implementation of Meta locators or dialog flows.
 
 ## Authorization Boundary
 
@@ -24,12 +24,22 @@ Coordinate isolated Meta Leads jobs without mixing browser profiles, ad accounts
 - Keep at most one active writer per AdsPower Profile and one active writer per Meta `adAccountId`. Acquire both locks before the first write and retain them until the job reaches `DRAFT_SAVED` or `PUBLISHED`, or stops in any terminal or paused state. Release both locks together; never leave one held after the worker exits.
 - Treat budget as `{ amount, currency, kind }`. Reject a numeric value without a currency, and reject a UI currency mismatch rather than converting implicitly.
 
+## Worker Contract
+
+- Load and validate each job's `requestPath` before starting a browser worker. Its `jobId`, `profileId`, `adAccountId`, `page.id`, optional `businessId`, and complete budget tuple must match the manifest. Stop that job before CDP connection on any mismatch.
+- Run one base draft runner process per eligible job. The coordinator must ensure that workers sharing a Profile or account do not overlap; the runner's Profile and account locks are a final backstop, not the scheduler.
+- Give every worker its own diagnostics directory. Use the manifest's append-only checkpoint path or an explicitly derived per-job path, and preserve `jobId` as the record key.
+- Keep the base runner as the sole owner of its CDP connection, `Page`, locators, dialogs, field readback, autosave checks, and stage screenshots. The coordinator observes process results and schedules jobs; it must not click or fill the worker's page.
+- Reuse `../meta-lead-ads-flow/scripts/run-meta-lead-draft.mjs` and its core helpers directly. Do not copy their locators, waits, retry logic, or UI-stage implementation into the concurrent Skill.
+
 ## UI Operation Discipline
 
 - Within one Profile, allow only one in-flight semantic UI operation. Different confirmed Profiles and accounts may progress concurrently within the global limit.
 - After navigation, require the expected URL path or heading. After a field write, read back the normalized value or selected state. After a mutation, wait for validation to finish and autosave to settle before checkpointing.
 - Do not require autosave after a read-only probe or a click that only opens a dialog. Use the expected dialog or section as its completion condition.
 - Fill and verify fields one at a time. For formatted currency inputs, select all, clear, type deliberately, blur, and verify both normalized amount and displayed account currency.
+- Reacquire an input locator after a fill and before blur/readback because a React rerender can detach the original node. Find budget kind and currency from the nearest labeled budget section, not from a fixed parent depth.
+- Treat creative setup as state transitions: select the requested media type before waiting for the media dialog, and verify the expected copy labels and unique visible fields before assigning values by position. Do not assume that two consecutive creative dialogs share the same DOM node.
 - An ordinary idempotent operation may have at most two attempts: the initial attempt and one retry after a fresh probe. Never use an unbounded retry loop or retry merely because a fixed delay elapsed.
 - Do not automatically retry Campaign, Ad Set, Form, creative, or publish creation after an ambiguous result. Reconcile against the checkpoint and Meta state first; an ambiguous publish is always `UNKNOWN`.
 - Immediately before each non-idempotent create or publish click, append a `pending` action record without advancing the last verified state. Append the next progress state only after Meta confirms the result.
@@ -45,7 +55,13 @@ Coordinate isolated Meta Leads jobs without mixing browser profiles, ad accounts
 2. Confirm that every declared Profile is already open, then run a read-only probe for each one. Do not mutate any job until every job has a resolved Profile, exactly one intended Ads Manager tab, matching account/page/currency, and a classified gate.
 3. Schedule draft work with the manifest's bounded concurrency. Default to two workers when unspecified; apply Profile and account locks regardless of the global limit.
 4. Before resuming or writing, read the base workflow's [checkpoint protocol](../meta-lead-ads-flow/references/checkpoints.md), acquire both locks, and reconcile the latest checkpoint with Meta. A missing checkpoint after an ambiguous create action is not proof that the action failed.
-5. Use the single-job Skill to create and save each draft. Persist monotonic checkpoints at `PREFLIGHT_OK`, `CAMPAIGN_SAVED`, `ADSET_SAVED`, `AD_CREATED`, `FORM_CREATED`, `CREATIVE_SAVED`, and `DRAFT_SAVED`, plus terminal failure states.
+5. Start the committed single-job runner for each scheduled draft, using the job's request, the manifest checkpoint, and a job-specific diagnostics directory:
+
+   ```powershell
+   npm run run:draft -- --request=<requestPath> --checkpoint=<checkpointPath> --diagnostics=.meta-lead-ads/diagnostics/<jobId>
+   ```
+
+   Persist monotonic checkpoints at `PREFLIGHT_OK`, `CAMPAIGN_SAVED`, `ADSET_SAVED`, `AD_CREATED`, `FORM_CREATED`, `CREATIVE_SAVED`, and `DRAFT_SAVED`, plus terminal failure states.
 6. Report the complete draft review table. If fresh publish authorization is absent or narrower than the batch, stop all unauthorized jobs at `DRAFT_SAVED`.
 7. For authorized jobs only, re-probe immediately before publishing, then publish with the configured publish concurrency while retaining per-account serialization.
 8. Confirm each result from Meta. Record `PUBLISHED`, `FAILED`, or `UNKNOWN`; do not claim batch success from the click alone.
