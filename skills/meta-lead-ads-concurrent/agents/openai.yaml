@@ -1,0 +1,4 @@
+interface:
+  display_name: "Meta Lead Ads Concurrent"
+  short_description: "Coordinate concurrent Meta lead-ad jobs safely"
+  default_prompt: "Use $meta-lead-ads-concurrent to validate and coordinate these Meta lead-ad jobs across AdsPower profiles."

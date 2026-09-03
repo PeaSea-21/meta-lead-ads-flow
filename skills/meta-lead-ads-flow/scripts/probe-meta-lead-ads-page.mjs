@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 import { chromium } from "playwright-core";
+import {
+  accessBlockerPatterns,
+  buildAccessEvidence,
+  flagsFromText,
+} from "./probe-classification.mjs";
 
 const restrictionPatterns = [
   /我们已限制你的广告帐号|我們已限制你的廣告帳號/i,
@@ -7,15 +12,6 @@ const restrictionPatterns = [
   /无法使用或共用广告受众|無法使用或共用廣告受眾/i,
   /ad account (is )?(restricted|limited|disabled)/i,
   /can't create or run ads|cannot create or run ads/i,
-];
-
-const accessBlockerPatterns = [
-  /登录 Facebook|登入 Facebook|log in to Facebook/i,
-  /输入验证码|輸入驗證碼|enter (the )?(security )?code|captcha/i,
-  /需要双重验证|需要雙重驗證|two-factor authentication required|2fa required/i,
-  /添加付款方式才能|新增付款方式才能|payment method (is )?required/i,
-  /完成广告主验证才能|完成廣告主驗證才能|complete advertiser verification/i,
-  /完成身份验证才能|完成身分驗證才能|complete identity verification/i,
 ];
 
 const publishOnlyPatterns = [
@@ -131,12 +127,6 @@ async function collectVisibleTexts(page, selector, limit = 80) {
     .catch(() => []);
 }
 
-function flagsFromText(text, patterns) {
-  return patterns
-    .filter((pattern) => pattern.test(text))
-    .map((pattern) => pattern.source.replaceAll("\\", ""));
-}
-
 function parseUrl(rawUrl) {
   try {
     const parsed = new URL(rawUrl);
@@ -150,6 +140,22 @@ function parseUrl(rawUrl) {
   } catch {
     return { host: "", path: rawUrl, accountId: null, businessId: null, url: includeUrl ? rawUrl : undefined };
   }
+}
+
+async function hasVisibleAuthControl(page) {
+  const selector = [
+    'input[type="password"]',
+    'input[autocomplete="one-time-code"]',
+    'input[name="approvals_code"]',
+    '[data-testid*="captcha"]',
+    'iframe[src*="captcha"]',
+  ].join(",");
+
+  return page.locator(selector).evaluateAll((elements) => elements.some((element) => {
+    const style = window.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+  })).catch(() => false);
 }
 
 const active = await resolveCdp();
@@ -166,8 +172,20 @@ const tabs = await Promise.all(
     const buttons = await collectVisibleTexts(page, "button,[role=button]", 120);
     const inputs = await collectVisibleTexts(page, "input,textarea,[role=textbox],[role=combobox]", 120);
     const choices = await collectVisibleTexts(page, '[role=radio],[role=checkbox],label,[aria-checked="true"]', 120);
+    const blockerSurfaceTexts = await collectVisibleTexts(
+      page,
+      '[role=alert],[role=alertdialog],[role=dialog],[aria-modal="true"]',
+      40,
+    );
+    const accessEvidence = buildAccessEvidence({
+      surfaceTexts: blockerSurfaceTexts,
+      bodyText,
+      pageUrl: page.url(),
+      hasVisibleAuthControl: await hasVisibleAuthControl(page),
+      frameUrls: page.frames().map((frame) => frame.url()),
+    });
     const saveState = flagsFromText(bodyText, [/已保存|已儲存|All edits saved/i, /草稿|Draft/i, /正在验证|正在驗證|Validating/i]);
-    const accessBlockerFlags = flagsFromText(bodyText, accessBlockerPatterns);
+    const accessBlockerFlags = flagsFromText(accessEvidence, accessBlockerPatterns);
     const publishOnlyFlags = flagsFromText(bodyText, publishOnlyPatterns);
     const restrictionFlags = flagsFromText(bodyText, restrictionPatterns);
 

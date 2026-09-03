@@ -14,6 +14,7 @@ Use this skill when the user asks to create, automate, review, or document a Met
 - If the page says the ad account is limited/restricted, for example `我们已限制你的广告帐号`, `我們已限制你的廣告帳號`, `无法建立或刊登广告`, `無法建立或刊登廣告`, or `ad account restricted`, stop and report `ACCOUNT_RESTRICTED`. Do not try to continue the creation flow.
 - Classify the scope of notices precisely. A banner headed `需要账号资料`, `需要帳號資料`, or equivalent that only says account details must be confirmed before ads can be published is `PUBLISH_BLOCKED_ACCOUNT_DETAILS`, not `ACCOUNT_RESTRICTED`. Do not follow its account-overview action. A draft-only run may continue when the objective and editor remain available, but it must stop before publish and report the notice.
 - Do not treat navigation labels such as `帐单和付款`, `帳單和付款`, or `Billing and payments` as blockers. A blocker must be an actionable alert, dialog, challenge, or explicit inability to create/edit ads.
+- Classify login, OTP, 2FA, and CAPTCHA text only when it appears in a visible blocking surface, an authentication URL, or alongside an actual authentication control. Ignore instructional copies inside instant-form previews, including sample `输入验证码` / `輸入驗證碼` screens.
 - Keep Profile IDs, ad account IDs, Business IDs, cookies, tokens, API keys, screenshots, DOM dumps, and Playwright traces out of Git unless the user explicitly asks to commit a reviewed, redacted artifact.
 - Draft creation is acceptable only after a read-only smoke/probe confirms an authorized Ads Manager tab for the intended account.
 

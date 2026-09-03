@@ -1,8 +1,8 @@
 # Meta Leads + Instant Form Skill
 
-这是一个独立的 Meta 广告草稿工作包，只保留已经实跑验证过的 `Leads / 潜在客户 + Instant form / 即时表单` skill、AdsPower 页面探针和使用资料。
+这是一个 Meta Leads 工作包，包含经过实跑验证的单任务草稿 Skill、多 AdsPower Profile 并发协调 Skill、只读页面探针和任务清单校验器。
 
-当前支持范围是创建、检查并保存广告草稿。默认不发布广告，也不处理 CAPTCHA、双重验证、付款、身份验证或账号资料确认。
+默认范围是创建、检查并保存广告草稿。并发 Skill 只有在当前对话中获得针对具体任务的明确授权后才可进入发布阶段；两个 Skill 都不处理 CAPTCHA、双重验证、付款、身份验证或账号资料确认。
 
 ## 目录结构
 
@@ -12,14 +12,21 @@ meta-lead-ads-flow/
 |   |-- SKILL.md
 |   |-- agents/openai.yaml
 |   |-- references/playwright-probing.md
+|   |-- scripts/probe-classification.mjs
 |   `-- scripts/probe-meta-lead-ads-page.mjs
+|-- skills/meta-lead-ads-concurrent/
+|   |-- SKILL.md
+|   |-- agents/openai.yaml
+|   |-- references/job-manifest.md
+|   `-- scripts/validate-job-manifest.mjs
+|-- tests/
 |-- docs/ad-request-template.md
 |-- package.json
 |-- package-lock.json
 `-- .gitignore
 ```
 
-旧仓库中的 Sales worker、批量并发框架、历史截图和 Word 解包目录没有迁移。
+旧仓库中的 Sales worker、历史截图和 Word 解包目录没有迁移。并发 Skill 负责安全调度规范和输入校验，不包含未经审核的批量点击发布器。
 
 ## 环境准备
 
@@ -54,6 +61,12 @@ skills/meta-lead-ads-flow
 
 安装后重新打开 Codex 任务，让 skill 目录被重新发现。
 
+并发使用时还需安装：
+
+```text
+skills/meta-lead-ads-concurrent
+```
+
 ## 每次怎么使用
 
 1. 打开正确的 AdsPower Profile 和 Meta Ads Manager 标签页。
@@ -81,6 +94,8 @@ npm run probe -- --profile=YOUR_ADSPOWER_PROFILE_ID
 
 探针不会点击、填写、导航或发布，只读取当前 Ads Manager 标签页的可见状态。输出可能含广告账户上下文，不要提交到 Git 或转发给无关人员。
 
+探针只会从真实警告、认证对话框、认证 URL 或认证控件判断登录、验证码和 CAPTCHA。即时表单预览中的验证码示例不会被当成账户阻塞。
+
 只有在明确允许启动对应 Profile 时，才使用：
 
 ```powershell
@@ -95,6 +110,18 @@ npm run probe -- --profile=YOUR_ADSPOWER_PROFILE_ID --start
 - 页面显示 `草稿`。
 - 页面显示 `已储存所有编辑内容`，或明确报告仍在平台验证中。
 - `publishClicked` 必须为 `false`。
+
+## 多 Profile 并发
+
+使用 `$meta-lead-ads-concurrent` 时，每个任务必须显式绑定 AdsPower Profile、Meta 广告账户、Facebook Page，以及带币种的预算。真实任务清单应使用 `*.ads-jobs.local.json` 文件名并保持在 Git 之外。
+
+校验任务清单：
+
+```powershell
+npm run validate:manifest -- <manifest.ads-jobs.local.json>
+```
+
+同一 Profile 或同一广告账户的任务会串行执行；不同 Profile 和账户可以在配置的上限内并行。`targetState: "published"` 只表示目标，不等于发布授权。发布前仍需要当前对话中针对具体任务的明确确认。
 
 ## 常见状态
 

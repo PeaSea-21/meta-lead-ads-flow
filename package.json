@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Read-only AdsPower probe and Codex skill for Meta Leads instant-form drafts.",
+  "description": "Codex skills and validation tools for isolated and concurrent Meta Leads workflows.",
   "scripts": {
     "check": "node --check skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs",
+    "test": "node --test",
+    "validate:manifest": "node skills/meta-lead-ads-concurrent/scripts/validate-job-manifest.mjs",
     "probe": "node skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs",
     "smoke": "node skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs"
   },
