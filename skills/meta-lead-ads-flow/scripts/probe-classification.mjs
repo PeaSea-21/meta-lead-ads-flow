@@ -7,6 +7,20 @@ export const accessBlockerPatterns = [
   /完成身份验证才能|完成身分驗證才能|complete identity verification/i,
 ];
 
+export const restrictionPatterns = [
+  /我们已限制你的广告帐号|我們已限制你的廣告帳號/i,
+  /无法建立或刊登广告|無法建立或刊登廣告/i,
+  /无法使用或共用广告受众|無法使用或共用廣告受眾/i,
+  /ad account (is )?(restricted|limited|disabled)/i,
+  /can't create or run ads|cannot create or run ads/i,
+];
+
+export const publishOnlyPatterns = [
+  /需要(账号|帳號)(资料|資料)[\s\S]{0,500}前往(账号|帳號)(总览|總覽)/i,
+  /需要先(确认|確認)[\s\S]{0,300}(帐号|帳號|账户|帳戶)[\s\S]{0,300}(资料|資料)[\s\S]{0,300}才能[\s\S]{0,100}(发布|發佈|刊登)(广告|廣告)/i,
+  /need to confirm[\s\S]{0,300}account[\s\S]{0,300}(details|information)[\s\S]{0,300}before[\s\S]{0,100}publish/i,
+];
+
 export function flagsFromText(text, patterns) {
   return patterns
     .filter((pattern) => pattern.test(text))

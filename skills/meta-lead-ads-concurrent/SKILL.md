@@ -44,7 +44,7 @@ Coordinate isolated Meta Leads jobs without mixing browser profiles, ad accounts
 
 2. Confirm that every declared Profile is already open, then run a read-only probe for each one. Do not mutate any job until every job has a resolved Profile, exactly one intended Ads Manager tab, matching account/page/currency, and a classified gate.
 3. Schedule draft work with the manifest's bounded concurrency. Default to two workers when unspecified; apply Profile and account locks regardless of the global limit.
-4. Before resuming or writing, read [references/checkpoints.md](references/checkpoints.md), acquire both locks, and reconcile the latest checkpoint with Meta. A missing checkpoint after an ambiguous create action is not proof that the action failed.
+4. Before resuming or writing, read the base workflow's [checkpoint protocol](../meta-lead-ads-flow/references/checkpoints.md), acquire both locks, and reconcile the latest checkpoint with Meta. A missing checkpoint after an ambiguous create action is not proof that the action failed.
 5. Use the single-job Skill to create and save each draft. Persist monotonic checkpoints at `PREFLIGHT_OK`, `CAMPAIGN_SAVED`, `ADSET_SAVED`, `AD_CREATED`, `FORM_CREATED`, `CREATIVE_SAVED`, and `DRAFT_SAVED`, plus terminal failure states.
 6. Report the complete draft review table. If fresh publish authorization is absent or narrower than the batch, stop all unauthorized jobs at `DRAFT_SAVED`.
 7. For authorized jobs only, re-probe immediately before publishing, then publish with the configured publish concurrency while retaining per-account serialization.

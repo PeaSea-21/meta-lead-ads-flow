@@ -11,13 +11,16 @@ meta-lead-ads-flow/
 |-- skills/meta-lead-ads-flow/
 |   |-- SKILL.md
 |   |-- agents/openai.yaml
+|   |-- references/checkpoints.md
+|   |-- references/draft-request.md
 |   |-- references/playwright-probing.md
+|   |-- scripts/draft-runner-core.mjs
 |   |-- scripts/probe-classification.mjs
-|   `-- scripts/probe-meta-lead-ads-page.mjs
+|   |-- scripts/probe-meta-lead-ads-page.mjs
+|   `-- scripts/run-meta-lead-draft.mjs
 |-- skills/meta-lead-ads-concurrent/
 |   |-- SKILL.md
 |   |-- agents/openai.yaml
-|   |-- references/checkpoints.md
 |   |-- references/job-manifest.md
 |   `-- scripts/validate-job-manifest.mjs
 |-- tests/
@@ -85,6 +88,18 @@ skills/meta-lead-ads-concurrent
 5. 探测通过后才创建 Campaign、Ad Set、Instant Form 和 Ad Creative。
 6. 最后以 `草稿` 和 `已储存所有编辑内容` 为完成依据，并保留页面供人工检查。
 
+## 参数化单任务 Runner
+
+需要可恢复、可计时的重复执行时，按 [Draft Runner Request](skills/meta-lead-ads-flow/references/draft-request.md) 创建本地 JSON 请求，然后运行：
+
+```powershell
+npm run run:draft -- --request=<request.ads-request.local.json>
+```
+
+Runner 只连接请求中指定且已经打开的 AdsPower Profile，每个任务只建立一次 CDP 连接。它使用 Profile 和广告账户双锁、条件等待及追加式检查点；不包含发布操作。正常路径只保存阶段截图和计时，失败时才采集局部页面诊断。请求、检查点和诊断文件都保持在 Git 之外。
+
+`testMode: true` 会为缺少的名称和文案生成确定性的 `TEST ONLY` 内容，URL 字段使用有效的 `example.com` 测试地址。测试素材必须已经存在于账户媒体库中。
+
 ## 只读页面探针
 
 AdsPower Profile 已经打开时运行：
@@ -134,7 +149,7 @@ npm run validate:manifest -- <manifest.ads-jobs.local.json>
 
 ## 预计耗时
 
-- 账号已登录、素材和文案齐全：约 8-15 分钟。
+- 使用参数化 Runner、账号已登录且素材已存在：通常约 3-8 分钟。
 - 需要创建完整即时表单并生成测试内容：约 10-20 分钟。
 - Meta 页面响应较慢或界面发生变化：约 20-30 分钟。
 

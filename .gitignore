@@ -5,6 +5,7 @@ output/
 !.env.example
 *.log
 *.ads-jobs.local.json
+*.ads-request.local.json
 .meta-lead-ads/
 
 # Browser diagnostics may contain account context or authentication data.

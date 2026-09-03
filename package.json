@@ -5,10 +5,11 @@
   "type": "module",
   "description": "Codex skills and validation tools for isolated and concurrent Meta Leads workflows.",
   "scripts": {
-    "check": "node --check skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs",
+    "check": "node --check skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs && node --check skills/meta-lead-ads-flow/scripts/draft-runner-core.mjs && node --check skills/meta-lead-ads-flow/scripts/run-meta-lead-draft.mjs",
     "test": "node --test",
     "validate:manifest": "node skills/meta-lead-ads-concurrent/scripts/validate-job-manifest.mjs",
     "probe": "node skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs",
+    "run:draft": "node skills/meta-lead-ads-flow/scripts/run-meta-lead-draft.mjs",
     "smoke": "node skills/meta-lead-ads-flow/scripts/probe-meta-lead-ads-page.mjs"
   },
   "dependencies": {

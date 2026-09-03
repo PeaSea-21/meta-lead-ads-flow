@@ -1,6 +1,6 @@
 # Checkpoints And Resume
 
-Use an append-only local JSONL checkpoint file. It may contain real account and object IDs, so keep it under `.meta-lead-ads/` or another Git-ignored location.
+Use an append-only local JSONL checkpoint file for both single-job and concurrent runs. It may contain real account and object IDs, so keep it under `.meta-lead-ads/` or another Git-ignored location.
 
 ## Record
 
@@ -16,10 +16,10 @@ Append a progress record after each stage has been verified. Before a non-idempo
   "adAccountId": "<META_AD_ACCOUNT_ID>",
   "pageId": "<FACEBOOK_PAGE_ID>",
   "objects": {
-    "campaign": { "id": "<ID>", "name": "<NAME>" },
-    "adSet": { "id": "<ID>", "name": "<NAME>" },
-    "form": { "id": "<ID>", "name": "<NAME>" },
-    "ad": { "id": "<ID>", "name": "<NAME>" }
+    "campaign": { "id": "<ID_IF_AVAILABLE>", "name": "<NAME>" },
+    "adSet": { "id": "<ID_IF_AVAILABLE>", "name": "<NAME>" },
+    "form": { "id": "<ID_IF_AVAILABLE>", "name": "<NAME>" },
+    "ad": { "id": "<ID_IF_AVAILABLE>", "name": "<NAME>" }
   },
   "page": {
     "path": "/adsmanager/manage/ads/edit/standalone",
@@ -40,7 +40,7 @@ Valid progress states are:
 
 Terminal or paused states are `FAILED`, `UNKNOWN`, `HUMAN_ACTION_REQUIRED`, `INPUT_CHANGED`, and `STATE_MISMATCH`.
 
-An intent record does not advance `state`. Give the action a locally unique `actionId`, and include the intended object type and stable request fingerprint. After Meta confirms the result, append a new record with the resulting object ID, the next progress state, and the same `actionId` marked `confirmed`. If the UI disconnects or navigates unexpectedly after the click, leave the intent in history and append `UNKNOWN`; do not replay it.
+An intent record does not advance `state`. Give the action a locally unique `actionId`, and include the intended object type and stable request fingerprint. After Meta confirms the result, append a new record with the resulting object ID when available, the next progress state, and the same `actionId` marked `confirmed`. If the UI disconnects or navigates unexpectedly after the click, leave the intent in history and append `UNKNOWN`; do not replay it.
 
 ## Resume Rules
 
